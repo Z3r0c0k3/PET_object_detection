@@ -76,7 +76,7 @@ class PETBottleDetector:
 
 def main():
     # 모델 초기화
-    weights_path = 'path/to/your/weights.pt'  # 학습된 가중치 파일 경로
+    weights_path = './last.pt'  # 학습된 가중치 파일 경로
     detector = PETBottleDetector(weights_path)
     
     # 카메라 설정

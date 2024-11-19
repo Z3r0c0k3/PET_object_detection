@@ -23,7 +23,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # GitHub 저장소 설정
-GITHUB_REPO="your-github-username/your-repo-name"  # 여기에 본인의 GitHub 저장소 주소를 입력하세요
+GITHUB_REPO="Z3r0c0k3/PET_object_detection"
 REPO_DIR="/home/pi/pet_detection"
 
 # 1. 시스템 업데이트 및 기본 패키지 설치
