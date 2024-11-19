@@ -29,14 +29,13 @@ REPO_DIR="/home/pi/pet_detection"
 # 1. 시스템 업데이트 및 기본 패키지 설치
 echo "1. 시스템 업데이트 및 기본 패키지 설치 중..."
 apt-get update && apt-get upgrade -y || handle_error "시스템 업데이트 실패"
-apt-get install -y python3-pip python3-opencv libopencv-dev v4l-utils git || handle_error "기본 패키지 설치 실패"
+apt-get install -y python3-pip python3-opencv v4l-utils git || handle_error "기본 패키지 설치 실패"
 
 # OpenCV 최적화 라이브러리 설치
 echo "2. OpenCV 최적화 라이브러리 설치 중..."
 apt-get install -y \
-    libjpeg-dev \
-    libtiff-dev \
-    libjasper-dev \
+    libjpeg62-turbo-dev \
+    libtiff5-dev \
     libpng-dev \
     libavcodec-dev \
     libavformat-dev \
