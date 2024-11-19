@@ -25,7 +25,7 @@ fi
 # GitHub 저장소 설정
 GITHUB_REPO="Z3r0c0k3/PET_object_detection"
 REPO_DIR="/home/pi/PET_object_detection"
-VENV_DIR="/home/pi/PET_object_detection_venv"
+VENV_DIR="/home/pi/PET_object_detection/venv"
 
 # 1. 시스템 업데이트 및 기본 패키지 설치
 echo "1. 시스템 업데이트 및 기본 패키지 설치 중..."
