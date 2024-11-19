@@ -80,17 +80,15 @@ cat > /home/pi/run_detection.sh << EOL
 
 # 로그 파일 설정
 LOG_FILE="/home/pi/pet_detection_run.log"
-exec 1> >(tee -a "\$LOG_FILE") 2>&1
+exec 1> >(tee -a "$LOG_FILE") 2>&1
 
 echo "=== PET 병 감지 시스템 실행 ===" 
-echo "시작 시간: \$(date)"
+echo "시작 시간: $(date)"
 
 # 가상환경 활성화
 source "$VENV_DIR/bin/activate"
 
-# GitHub 저장소 설정
-REPO_DIR="/home/pi/pet_detection"
-cd "\$REPO_DIR" || exit 1
+cd "$REPO_DIR" || exit 1
 
 # GitHub에서 최신 코드 가져오기
 echo "최신 코드 가져오기 중..."
