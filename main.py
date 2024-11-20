@@ -2,6 +2,7 @@ import os
 import sys
 import torch
 from pathlib import Path
+import cv2
 
 # YOLOR 경로 설정
 FILE = Path(__file__).resolve()
@@ -9,7 +10,8 @@ ROOT = FILE.parents[0]  # YOLO 레포지토리 루트
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # 경로 추가
 
-from models.experimental import attempt_load
+# YOLOR 모델을 불러오는 새로운 방법
+from models.yolo import Model  # 최신 YOLOR 버전에서는 이렇게 사용합니다
 from utils.datasets import LoadStreams
 from utils.general import check_img_size, non_max_suppression, scale_coords
 from utils.plots import Annotator, colors
@@ -25,12 +27,12 @@ CLASSES = ["PET_transparent", "PET_color"]
 
 # YOLOR 모델 로드
 device = select_device(DEVICE)
-model = attempt_load(WEIGHTS, map_location=device)
-stride = int(model.stride.max())  # 모델 stride
-img_size = check_img_size(IMG_SIZE, s=stride)
+model = Model(cfg='models/yolor_p6.yaml', ch=3, nc=80)  # 모델 초기화
+model.load_state_dict(torch.load(WEIGHTS, map_location=device)['model'])  # 가중치 로드
+model.to(device).eval()  # 모델을 평가 모드로 설정
 
 # 데이터 스트림(웹캠)
-dataset = LoadStreams(0, img_size=img_size, stride=stride, auto=True)  # 0: 웹캠
+dataset = LoadStreams(0, img_size=IMG_SIZE, stride=model.stride.max(), auto=True)  # 0: 웹캠
 
 # 탐지 시작
 for path, img, im0s, vid_cap, s in dataset:
