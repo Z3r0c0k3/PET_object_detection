@@ -4,7 +4,7 @@ import torch
 from pathlib import Path
 
 # YOLOR 경로 설정
-FILE = Path(__file__).resolve()
+FILE = Path("../yolor").resolve()
 ROOT = FILE.parents[0]  # YOLO 레포지토리 루트
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # 경로 추가
