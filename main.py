@@ -1,120 +1,64 @@
-import torch
 import cv2
-import numpy as np
-from models.experimental import attempt_load
-from utils.general import non_max_suppression, scale_coords
-from utils.plots import plot_one_box
-from utils.torch_utils import select_device
-from utils.datasets import letterbox
+import torch
+from PIL import Image
+from ultralytics import YOLO
+from ultralytics.utils.plotting import Annotator
 
-class PETBottleDetector:
-    def __init__(self, weights_path):
-        # 디바이스 설정
-        self.device = select_device('cpu')
-        # 모델 로드
-        self.model = attempt_load(weights_path, device=self.device)
-        # 타겟 라벨 초기화
-        self.target_labels = {
-            'PET_transparent': False,
-            'PET_color': False
-        }
+# YOLO 모델 불러오기
+model = YOLO("./last.pt")
 
-    def detect_pet_bottles(self, frame):
-        # 이미지 전처리
-        img = letterbox(frame, 640, stride=32)[0]
-        img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB
-        img = np.ascontiguousarray(img)
-        img = torch.from_numpy(img).to(self.device)
-        img = img.float()
-        img /= 255.0
-        if img.ndimension() == 3:
-            img = img.unsqueeze(0)
+colors = [(255, 0, 0), (0, 255, 0)]
 
-        # 추론
-        pred = self.model(img, augment=False)[0]
-        pred = non_max_suppression(pred, 0.25, 0.45)
+def process_frame(frame):
+    results = model.track(source=frame, show=False, stream=False, save=False, save_txt=False)
+    label_status = {"PET_transparent": False, "PET_color": False}
+    max_score = 0
+    best_label = None
+    annotator = Annotator(frame)
 
-        # 결과 처리
-        confidence_scores = {
-            'PET_transparent': 0.0,
-            'PET_color': 0.0
-        }
-        
-        # 모든 라벨을 False로 초기화
-        self.target_labels = {
-            'PET_transparent': False,
-            'PET_color': False
-        }
+    for result in results:
+        detections = result.boxes.data
 
-        # 감지된 객체 처리
-        if pred[0] is not None and len(pred[0]):
-            det = pred[0]
-            det[:, :4] = scale_coords(img.shape[2:], det[:, :4], frame.shape).round()
-            
-            for *xyxy, conf, cls in det:
-                label = self.model.names[int(cls)]
-                if label in self.target_labels:
-                    # 현재 객체의 신뢰도 저장
-                    current_conf = conf.item()
-                    if current_conf > confidence_scores[label]:
-                        confidence_scores[label] = current_conf
-                        # 바운딩 박스 그리기
-                        plot_one_box(
-                            xyxy, 
-                            frame, 
-                            label=f'{label} {current_conf:.2f}', 
-                            color=(0, 255, 0)
-                        )
+        for detection in detections:
+            x1, y1, x2, y2, _, score, class_id = detection
+            class_name = model.names[int(class_id)]
 
-        # 가장 높은 신뢰도를 가진 라벨만 True로 설정
-        if any(confidence_scores.values()):
-            max_label = max(confidence_scores.items(), key=lambda x: x[1])[0]
-            if confidence_scores[max_label] > 0:
-                self.target_labels[max_label] = True
+            # 감지된 클래스가 'PET_transparent' 또는 'PET_color'일 때 처리
+            if class_name in label_status and score > 0.7:
+                if score > max_score:
+                    max_score = score
+                    best_label = class_name
 
-        return frame, self.target_labels, confidence_scores
+                annotator.box_label(
+                    (x1, y1, x2, y2),
+                    f"{class_name}: {score:.2f}",
+                    color=colors[int(class_id) % len(colors)],
+                )
 
-def main():
-    # 모델 초기화
-    weights_path = './last.pt'  # 학습된 가중치 파일 경로
-    detector = PETBottleDetector(weights_path)
-    
-    # 카메라 설정
-    cap = cv2.VideoCapture(0)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    # 스코어가 가장 높은 클래스의 값을 True로 설정
+    if best_label:
+        label_status[best_label] = True
+        print(f"{best_label} detected with highest score: {max_score:.2f}")
+    else:
+        print("No relevant objects detected")
 
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+    frame = annotator.result()
+    return frame, label_status
 
-        # 객체 감지 실행
-        frame, target_labels, confidence_scores = detector.detect_pet_bottles(frame)
+# 웹캠 설정 (기본 카메라: 인덱스 0)
+cap = cv2.VideoCapture(0)
 
-        # 결과 텍스트 생성
-        result_text = "Detection Results: "
-        for label, detected in target_labels.items():
-            result_text += f"{label}: {detected} ({confidence_scores[label]:.2f}) | "
-        
-        # 결과 화면에 표시
-        cv2.putText(
-            frame, 
-            result_text, 
-            (10, 30), 
-            cv2.FONT_HERSHEY_SIMPLEX, 
-            0.6, 
-            (0, 255, 0), 
-            2
-        )
-        cv2.imshow('PET Bottle Detection', frame)
+while cap.isOpened():
+    ret, frame = cap.read()
+    if not ret:
+        break
 
-        # 'q' 키를 누르면 종료
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+    frame, label_status = process_frame(frame)
+    cv2.imshow('YOLO Detection', frame)
 
-    cap.release()
-    cv2.destroyAllWindows()
+    # 'q' 키를 누르면 종료
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
-if __name__ == '__main__':
-    main()
+cap.release()
+cv2.destroyAllWindows()
